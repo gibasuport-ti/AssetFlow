@@ -1,0 +1,156 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields:
+    //   - id: string (required) - Firebase Auth UID
+    //   - username: string (required) - Display name
+    //   - email: string (required) - User email
+    //   - isAdmin: bool (required) - Admin privilege
+    //   - createdAt: number (optional) - Creation timestamp
+    //
+    // Collection: exchanges
+    // Fields:
+    //   - id: string (required)
+    //   - operationType: string (required) - exchange, delivery, return
+    //   - status: string (required) - draft, pending_receiver, completed
+    //   - timestamp: number (required)
+    //   - colaborador_nome: string (required)
+    //   - createdBy: string (required) - UID of creator
+    //
+    // Collection: emails
+    // Fields:
+    //   - id: string (required)
+    //   - to: string (required)
+    //   - subject: string (required)
+    //   - sentAt: number (required)
+    //
+    // Collection: audit_logs
+    // Fields:
+    //   - action: string (required)
+    //   - exchangeId: string (optional)
+    //   - envelopeId: string (optional)
+    //   - timestamp: timestamp (required)
+    //   - user: string (optional)
+    //   - error: string (optional)
+    //   - reason: string (optional)
+    //   - filePath: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+        (request.auth.token.email == "gibasuporte@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.createdBy;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'username', 'email', 'isAdmin']) &&
+             data.id is string &&
+             data.username is string && data.username.size() > 0 && data.username.size() < 100 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.isAdmin is bool;
+    }
+
+    function isValidExchange(data) {
+      return data.keys().hasAll(['id', 'operationType', 'status', 'timestamp', 'colaborador_nome', 'createdBy']) &&
+             data.id is string &&
+             data.operationType in ['exchange', 'delivery', 'return'] &&
+             data.status in ['draft', 'pending_receiver', 'completed'] &&
+             data.timestamp is number &&
+             data.colaborador_nome is string && data.colaborador_nome.size() > 0 &&
+             data.createdBy is string &&
+             (!('docusign_status' in data) || data.docusign_status in ['pending', 'completed', 'declined', 'voided']);
+    }
+
+    function isValidEmail(data) {
+      return data.keys().hasAll(['id', 'to', 'subject', 'sentAt']) &&
+             data.id is string &&
+             data.to is string &&
+             data.subject is string &&
+             data.sentAt is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Users can read their own profile. Admins can read all profiles.
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can create their own profile upon first login.
+      // We force isAdmin to be false unless the creator is an admin or the default admin.
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
+                      (request.resource.data.isAdmin == false || isAdmin());
+      
+      // Users can update their own profile but cannot change their isAdmin status.
+      // Admins can update any profile including isAdmin status.
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.isAdmin == resource.data.isAdmin) || 
+                      isAdmin();
+      
+      // Only admins can delete users, and they can't delete themselves.
+      allow delete: if isAdmin() && !isOwner(userId);
+    }
+
+    match /exchanges/{exchangeId} {
+      // All authenticated users can read exchanges for inventory visibility.
+      allow read: if isAuthenticated();
+      
+      // Any authenticated user can create an exchange.
+      // We force createdBy to match the auth UID.
+      allow create: if isAuthenticated() && isValidExchange(request.resource.data) && 
+                      request.resource.data.createdBy == request.auth.uid;
+      
+      // Owners can update their own exchanges. Admins can update any exchange.
+      allow update: if (isDocOwner() && isValidExchange(request.resource.data) && request.resource.data.createdBy == resource.data.createdBy) || 
+                      isAdmin();
+      
+      // Only admins can delete exchanges.
+      allow delete: if isAdmin();
+    }
+
+    match /emails/{emailId} {
+      // All authenticated users can read email history.
+      allow read: if isAuthenticated();
+      
+      // Any authenticated user can log an email.
+      allow create: if isAuthenticated() && isValidEmail(request.resource.data);
+      
+      // Only admins can update or delete email logs.
+      allow update, delete: if isAdmin();
+    }
+
+    match /audit_logs/{logId} {
+      // Only admins can read audit logs.
+      allow read: if isAdmin();
+      
+      // Backend (firebase-admin) handles creation, but we can allow admins to create if needed.
+      allow create: if isAdmin();
+      
+      // Audit logs should be immutable.
+      allow update, delete: if false;
+    }
+  }
+}
