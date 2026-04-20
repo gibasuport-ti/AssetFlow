@@ -34,15 +34,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
     <script type="text/javascript">
       // Single Page Apps for GitHub Pages
-      // MIT License
-      // https://github.com/rafgraph/spa-github-pages
       (function(l) {
+        var segments = l.pathname.split('/');
+        var repoName = segments[1];
         if (l.search[1] === '/' ) {
           var decoded = l.search.slice(1).split('&').map(function(s) { 
             return s.replace(/~and~/g, '&')
           }).join('?');
           window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
+              '/' + repoName + decoded + l.hash
           );
         }
       }(window.location))
@@ -62,13 +62,13 @@
         /* Transição suave de cores */
         * { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.1s ease; }
     </style>
-  <script type="module" crossorigin src="./assets/index-DV3eCvBC.js"></script>
+  <script type="module" crossorigin src="./assets/index-DN_K6cE8.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/vendor-core-i9nqyF7Z.js">
-  <link rel="modulepreload" crossorigin href="./assets/vendor-utils-Bjzm03Zm.js">
+  <link rel="modulepreload" crossorigin href="./assets/vendor-utils-DwQpC9MM.js">
   <link rel="modulepreload" crossorigin href="./assets/vendor-lucide-C3PCH6gr.js">
-  <link rel="modulepreload" crossorigin href="./assets/vendor-pdf-YMlub5kz.js">
+  <link rel="modulepreload" crossorigin href="./assets/vendor-pdf-BN2rbQOP.js">
   <link rel="modulepreload" crossorigin href="./assets/vendor-excel-BBWTpfDg.js">
-  <link rel="modulepreload" crossorigin href="./assets/vendor-firebase-eAEfh88L.js">
+  <link rel="modulepreload" crossorigin href="./assets/vendor-firebase-BzFtJ2aH.js">
   <link rel="stylesheet" crossorigin href="./assets/index-Bav0GgkR.css">
 </head>
 <body class="bg-slate-50 dark:bg-dracula-bg text-slate-900 dark:text-dracula-fg">
