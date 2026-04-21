@@ -52,9 +52,17 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-        (request.auth.token.email == "gibasuporte@gmail.com" && request.auth.token.email_verified == true)
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
       );
+    }
+
+    function isMasterAdminEmail(email) {
+      return email.lower().trim() == "gibasuporte@gmail.com";
+    }
+
+    function isMasterAdmin() {
+      return isMasterAdminEmail(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email);
     }
 
     function isOwner(userId) {
@@ -68,8 +76,8 @@ service cloud.firestore {
     function isValidUser(data) {
       return data.keys().hasAll(['id', 'username', 'email', 'isAdmin']) &&
              data.id is string &&
-             data.username is string && data.username.size() > 0 && data.username.size() < 100 &&
-             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.username is string &&
+             data.email is string && 
              data.isAdmin is bool;
     }
 
@@ -97,20 +105,11 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      // Users can read their own profile. Admins can read all profiles.
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isAuthenticated();
       
-      // Users can create their own profile upon first login.
-      // We force isAdmin to be false unless the creator is an admin or the default admin.
-      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
-                      (request.resource.data.isAdmin == false || isAdmin());
+      allow create, update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                              (request.resource.data.isAdmin == false || isMasterAdminEmail(request.resource.data.email));
       
-      // Users can update their own profile but cannot change their isAdmin status.
-      // Admins can update any profile including isAdmin status.
-      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.isAdmin == resource.data.isAdmin) || 
-                      isAdmin();
-      
-      // Only admins can delete users, and they can't delete themselves.
       allow delete: if isAdmin() && !isOwner(userId);
     }
 

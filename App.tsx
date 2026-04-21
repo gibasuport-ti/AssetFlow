@@ -70,8 +70,25 @@ const App: React.FC = () => {
   }, [isSimulatingUser]);
 
   useEffect(() => {
+    // Check for simulated session first (for APK/Local mode)
+    const savedSession = localStorage.getItem('assetflow_auth_simulation');
+    if (savedSession) {
+      try {
+        const user = JSON.parse(savedSession);
+        setCurrentUser(user);
+        setUserName(user.username);
+        setNameInput(user.username);
+        setIsAuthReady(true);
+      } catch (e) {
+        localStorage.removeItem('assetflow_auth_simulation');
+      }
+    }
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+      // If we already have a simulated user, don't let Firebase auth override it 
+      // unless there's an actual firebase user (rare in APK but possible)
       if (fbUser) {
+        localStorage.removeItem('assetflow_auth_simulation'); // Clear simulation if real auth detected
         let userProfile = await apiService.getUserById(fbUser.uid);
         
         // Root Admin Check (Bypass for owner)
@@ -93,7 +110,7 @@ const App: React.FC = () => {
           setUserName(userProfile.username);
           setNameInput(userProfile.username);
         }
-      } else {
+      } else if (!localStorage.getItem('assetflow_auth_simulation')) {
         setCurrentUser(null);
       }
       setIsAuthReady(true);
@@ -199,6 +216,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    localStorage.removeItem('assetflow_auth_simulation');
     await signOut(auth);
     setCurrentUser(null);
     setCurrentView('form');

@@ -34,15 +34,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
     <script type="text/javascript">
       // Single Page Apps for GitHub Pages
-      // MIT License
-      // https://github.com/rafgraph/spa-github-pages
       (function(l) {
+        var segments = l.pathname.split('/');
+        var repoName = segments[1];
         if (l.search[1] === '/' ) {
           var decoded = l.search.slice(1).split('&').map(function(s) { 
             return s.replace(/~and~/g, '&')
           }).join('?');
           window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
+              '/' + repoName + decoded + l.hash
           );
         }
       }(window.location))
@@ -62,10 +62,10 @@
         /* Transição suave de cores */
         * { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.1s ease; }
     </style>
-    <link rel="stylesheet" href="./index.css">
+    <link rel="stylesheet" href="index.css">
 </head>
 <body class="bg-slate-50 dark:bg-dracula-bg text-slate-900 dark:text-dracula-fg">
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>
